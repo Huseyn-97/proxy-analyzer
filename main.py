@@ -84,3 +84,33 @@ def check_proxy(proxy_data: str) -> dict:
 
     return test_result
 
+def main():
+    proxies = load_proxies("proxies.txt")
+
+    all_test_results = []
+    for proxy in proxies:
+        print(f"Checking:{proxy}")
+        result = check_proxy(proxy)
+        all_test_results .append(result)
+        print(f"->{result['status']} | {result['latency_ms']} ms| {result['exit_ip']}\n")
+
+    keys = ["proxy", "status", "latency_ms", "exit_ip", "country", "city", "asn", "isp"]
+
+    with open("results.csv", "w", newline= "", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames= keys)
+        writer.writeheader()
+        writer.writerows(all_test_results)
+
+    table = []
+    for r in all_test_results:
+        row = []
+        for k in keys:
+            row.append(r[k])
+        table.append(row)
+
+    print(tabulate(table, headers= keys, tablefmt="grid"))
+    print("\nresults.csv is being written in the document")
+
+if __name__ == "__main__":
+    main()
+
