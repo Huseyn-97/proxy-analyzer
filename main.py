@@ -41,3 +41,46 @@ def parse_proxy(proxy_data: str) -> dict|None:
     
     return None
 
+def check_proxy(proxy_data: str) -> dict:
+    """Proxy data are tested to get exit ip """
+    test_result = {
+        "proxy": proxy_data,
+        "status": "dead",
+        "latency_ms": None,
+        "exit_ip": None,
+        "country": None,
+        "city": None,
+        "asn": None,
+        "isp": None
+    }
+
+    proxy_dict = parse_proxy(proxy_data)
+    if proxy_dict is None:
+        return test_result
+    
+    try:
+        start_time = time.time()
+        response  = requests.get("https://api.ipify.org?format=json", proxies=proxy_dict,timeout= 10)
+        latency_ms = round((time.time() - start_time) * 1000 )
+        exit_ip = response.json()["ip"]
+
+        test_result["status"] = "alive"
+        test_result["latency_ms"] = latency_ms
+        test_result["exit_ip"] = exit_ip
+    except Exception:
+        return test_result
+    
+    try:
+        geo = requests.get(f"http://ip-api.com/json/{exit_ip}", timeout= 10).json()
+
+        test_result["country"] = geo.get("country")
+        test_result["city"] = geo.get("city")
+        test_result["asn"] = geo.get("as")
+        test_result["isp"] = geo.get("isp")
+    except Exception:
+        pass
+
+    time.sleep(1.4)
+
+    return test_result
+
