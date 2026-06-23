@@ -23,12 +23,21 @@ def parse_proxy(proxy_data: str) -> dict|None:
     if not proxy_data:
         return None
     
+    if proxy_data.startswith("socks5://"):
+        protocol = "socks5"
+        proxy_data = proxy_data.replace("socks5://", "")
+    elif proxy_data.startswith("http://"):
+        protocol = "http"
+        proxy_data = proxy_data.replace("http://", "")
+    else:
+        protocol = "http"
+    
     data_parts = proxy_data.split(":")
 
     if len(data_parts) == 2:
         host = data_parts[0]
         port = data_parts[1]
-        url = f"http://{host}:{port}"
+        url = f"{protocol}://{host}:{port}"
         return {"http": url, "https": url}
     
     elif len(data_parts) == 4:
@@ -36,7 +45,7 @@ def parse_proxy(proxy_data: str) -> dict|None:
         port = data_parts[1]
         user_name = data_parts[2]
         password = data_parts[3]
-        url = f"http://{user_name}:{password}@{host}:{port}"
+        url = f"{protocol}://{user_name}:{password}@{host}:{port}"
         return {"http": url, "https": url}
     
     return None
