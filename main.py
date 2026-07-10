@@ -3,6 +3,7 @@ import csv
 import time
 from tabulate import tabulate
 
+
 def load_proxies(filename: str) -> list[str]:
     """Getting proxy ip addresses and ports from txt file"""
     proxies = []
@@ -18,11 +19,12 @@ def load_proxies(filename: str) -> list[str]:
         print(f"Error {e}")
     return proxies
 
-def parse_proxy(proxy_data: str) -> dict|None:
+
+def parse_proxy(proxy_data: str) -> dict | None:
     """Proxy is sorted and formatted"""
     if not proxy_data:
         return None
-    
+
     if proxy_data.startswith("socks5://"):
         protocol = "socks5"
         proxy_data = proxy_data.replace("socks5://", "")
@@ -31,7 +33,7 @@ def parse_proxy(proxy_data: str) -> dict|None:
         proxy_data = proxy_data.replace("http://", "")
     else:
         protocol = "http"
-    
+
     data_parts = proxy_data.split(":")
 
     if len(data_parts) == 2:
@@ -39,7 +41,7 @@ def parse_proxy(proxy_data: str) -> dict|None:
         port = data_parts[1]
         url = f"{protocol}://{host}:{port}"
         return {"http": url, "https": url}
-    
+
     elif len(data_parts) == 4:
         host = data_parts[0]
         port = data_parts[1]
@@ -47,11 +49,12 @@ def parse_proxy(proxy_data: str) -> dict|None:
         password = data_parts[3]
         url = f"{protocol}://{user_name}:{password}@{host}:{port}"
         return {"http": url, "https": url}
-    
+
     return None
 
+
 def check_proxy(proxy_data: str) -> dict:
-    """Proxy data are tested to get exit ip """
+    """Proxy data are tested to get exit ip"""
     test_result = {
         "proxy": proxy_data,
         "status": "dead",
@@ -60,17 +63,19 @@ def check_proxy(proxy_data: str) -> dict:
         "country": None,
         "city": None,
         "asn": None,
-        "isp": None
+        "isp": None,
     }
 
     proxy_dict = parse_proxy(proxy_data)
     if proxy_dict is None:
         return test_result
-    
+
     try:
         start_time = time.time()
-        response  = requests.get("https://api.ipify.org?format=json", proxies=proxy_dict,timeout= 10)
-        latency_ms = round((time.time() - start_time) * 1000 )
+        response = requests.get(
+            "https://api.ipify.org?format=json", proxies=proxy_dict, timeout=10
+        )
+        latency_ms = round((time.time() - start_time) * 1000)
         exit_ip = response.json()["ip"]
 
         test_result["status"] = "alive"
@@ -78,21 +83,22 @@ def check_proxy(proxy_data: str) -> dict:
         test_result["exit_ip"] = exit_ip
     except Exception:
         return test_result
-    
+
     try:
-        geo = requests.get(f"http://ip-api.com/json/{exit_ip}", timeout= 10).json()
+        geo = requests.get(f"http://ip-api.com/json/{exit_ip}", timeout=10).json()
 
         if geo.get("status") == "success":
-           test_result["country"] = geo.get("country")
-           test_result["city"] = geo.get("city")
-           test_result["asn"] = geo.get("as")
-           test_result["isp"] = geo.get("isp")
+            test_result["country"] = geo.get("country")
+            test_result["city"] = geo.get("city")
+            test_result["asn"] = geo.get("as")
+            test_result["isp"] = geo.get("isp")
     except Exception:
         pass
 
     time.sleep(1.4)
 
     return test_result
+
 
 def main():
     proxies = load_proxies("proxies.txt")
@@ -101,13 +107,15 @@ def main():
     for proxy in proxies:
         print(f"Checking:{proxy}")
         result = check_proxy(proxy)
-        all_test_results .append(result)
-        print(f"->{result['status']} | {result['latency_ms']} ms| {result['exit_ip']}\n")
+        all_test_results.append(result)
+        print(
+            f"->{result['status']} | {result['latency_ms']} ms| {result['exit_ip']}\n"
+        )
 
     keys = ["proxy", "status", "latency_ms", "exit_ip", "country", "city", "asn", "isp"]
 
-    with open("results.csv", "w", newline= "", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames= keys)
+    with open("results.csv", "w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=keys)
         writer.writeheader()
         writer.writerows(all_test_results)
 
@@ -118,9 +126,9 @@ def main():
             row.append(r[k])
         table.append(row)
 
-    print(tabulate(table, headers= keys, tablefmt="grid"))
+    print(tabulate(table, headers=keys, tablefmt="grid"))
     print("\nresults.csv is being written in the document")
+
 
 if __name__ == "__main__":
     main()
-
