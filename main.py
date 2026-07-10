@@ -82,10 +82,11 @@ def check_proxy(proxy_data: str) -> dict:
     try:
         geo = requests.get(f"http://ip-api.com/json/{exit_ip}", timeout= 10).json()
 
-        test_result["country"] = geo.get("country")
-        test_result["city"] = geo.get("city")
-        test_result["asn"] = geo.get("as")
-        test_result["isp"] = geo.get("isp")
+        if geo.get("status") == "success":
+           test_result["country"] = geo.get("country")
+           test_result["city"] = geo.get("city")
+           test_result["asn"] = geo.get("as")
+           test_result["isp"] = geo.get("isp")
     except Exception:
         pass
 
