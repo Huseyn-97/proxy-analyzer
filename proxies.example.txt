@@ -1,0 +1,12 @@
+# HTTP proxies
+http://123.45.67.89:8080
+http://98.76.54.32:3128
+
+# HTTPS proxy
+https://11.22.33.44:8443
+
+# SOCKS5 proxy
+socks5://55.66.77.88:1080
+
+# Proxy with authentication (username:password@host:port)
+http://user:password@10.20.30.40:8080

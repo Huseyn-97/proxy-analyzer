@@ -1,6 +1,0 @@
-http://us.thepremiumports.com:8080:package-tpp-continent-north_america-session-HYzLiPGToKoLkmPy-ttl-10:ei4xa7xpugzi14lq
-http://rs.geekproxy.io:10000:55f36411aada04cc6004:ae83e18fe63c53e8
-http://151.242.206.218:40511:barbaraschmidt1934:xcgIBtd7oLer
-socks5://151.242.206.218:30511:barbaraschmidt1934:xcgIBtd7oLer
-http://104.238.26.207:40510:barbaraschmidt1934:TxPMf3eKAhzB
-socks5://104.238.26.207:30510:barbaraschmidt1934:TxPMf3eKAhzB
