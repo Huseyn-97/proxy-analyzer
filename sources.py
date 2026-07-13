@@ -31,4 +31,21 @@ class ProxyCheckSource(Source):
          response.raise_for_status()
          return response.json()
 
+class IpApiSource(Source):
+    """Looks up geo/ASN info for an IP using ip- api.com(free, no key)."""
+
+    name = "ip-api"
+
+    def fetch(self, ip: str) -> dict:
+        url = f"http://ip-api.com/json/{ip}"
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+
+        if data.get("status") != "success":
+            raise ValueError(f"ip-api returned status={data.get('status')} for {ip}")
+        
+        return data
+
+
     
