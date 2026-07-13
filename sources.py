@@ -37,6 +37,7 @@ class IpApiSource(Source):
     name = "ip-api"
 
     def fetch(self, ip: str) -> dict:
+        """"Returns ip-api.com's raw JSON response for the given IP ."""
         url = f"http://ip-api.com/json/{ip}"
         response = requests.get(url, timeout=5)
         response.raise_for_status()
@@ -46,6 +47,26 @@ class IpApiSource(Source):
             raise ValueError(f"ip-api returned status={data.get('status')} for {ip}")
         
         return data
+    
+class IpInfoSource(Source):
+    """"Looks up geo/ASN info for an IP using ipinfo.io (free, no key needed for basic lookups)."""
+
+    name = "ipinfo"
+
+    def fetch(self, ip: str) -> dict:
+        """"Returns ipinfo.io's raw JSON response for the given IP."""
+        url = f"https://ipinfo.io/{ip}/json"
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+
+        if data.get("bogon"):
+            raise ValueError(f"ipinfo returned bogon(no geo data) for {ip}")
+        
+        return data 
+    
+    
+
 
 
     
