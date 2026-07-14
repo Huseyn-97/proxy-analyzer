@@ -65,6 +65,23 @@ class IpInfoSource(Source):
         
         return data 
     
+class IpWhoIsSource(Source):
+    """"Looks up geo/ASN info for an IP using ipwhois.io(free, no key)."""
+
+    name = "ipwhois"
+
+    def fetch(self, ip:str) -> dict:
+        """"Returns ipwho.is's raw JSON response for the given IP."""
+        url = f"https://ipwho.is/{ip}"
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+
+        if not data.get("success", True):
+            raise ValueError(f"ipwho.is returned success=False ({data.get('message')}) for {ip}")
+        
+        return data 
+    
     
 
 
