@@ -29,7 +29,12 @@ class ProxyCheckSource(Source):
          url = f"https://proxycheck.io/v2/{ip}?vpn=1&asn=1"
          response = requests.get(url, timeout=5)
          response.raise_for_status()
-         return response.json()
+         data = response.json()
+
+         if data.get("status") != "ok":
+             raise ValueError(f"proxychceck.io returned status={data.get('status')} for {ip}")
+         
+         return data 
 
 class IpApiSource(Source):
     """Looks up geo/ASN info for an IP using ip- api.com(free, no key)."""
