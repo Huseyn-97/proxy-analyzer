@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
 import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Source(ABC):
     """"
@@ -85,7 +89,38 @@ class IpWhoIsSource(Source):
         if not data.get("success", True):
             raise ValueError(f"ipwho.is returned success=False ({data.get('message')}) for {ip}")
         
+        return data
+
+class AbuseIPDBSource(Source):
+    """Looks up an IP's abuse reputation using the AbuseIPDB API (requires API key)."""
+
+    name = "abuseipdb"
+
+    def fetch(self, ip: str) -> dict:
+        """Returns AbuseIPDB's raw JSON response for the given IP."""
+        api_key = os.getenv("ABUSEIPDB_KEY")
+        if not api_key:
+            raise ValueError("ABUSEIPDB_KEY not found in environment (.env)")
+
+        url = "https://api.abuseipdb.com/api/v2/check"
+        headers = {
+            "Key": api_key,
+            "Accept": "application/json",
+        }
+        params = {
+            "ipAddress": ip,
+            "maxAgeInDays": 90,
+        }
+        response = requests.get(url, headers=headers, params=params, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+
+        if not data.get("data", {}).get("isPublic", True):
+            raise ValueError(f"AbuseIPDB: {ip} is not a public IP")
+        
         return data 
+    
+
     
     
 
