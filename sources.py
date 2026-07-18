@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import requests
 import os
 from dotenv import load_dotenv
+from bs4 import BeautifulSoup 
 
 load_dotenv()
 
@@ -143,6 +144,31 @@ class IPQualityScoreSource(Source):
             raise ValueError(f"IPQS: {ip} is a private IP (no fraud data)")
 
         return data
+    
+class ScamalyticsSource(Source):
+    """Looks up an IP's fraud score by parsing the Scamalytics HTML page (no API key)."""
+
+    name = "scamalytics"
+
+    def fetch(self, ip: str) -> dict:
+        """Parses Scamalytics' HTML page and returns the fraud score for the given IP."""
+        url = f"https://scamalytics.com/ip/{ip}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+        }
+        response = requests.get(url, headers=headers, timeout=5)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        score_div = soup.find("div", class_="score")
+
+        if score_div is None:
+            raise ValueError(f"Scamalytics: could not find score element for {ip}")
+
+        text = score_div.get_text(strip=True)
+        score = int(text.replace("Fraud Score:", "").strip())
+
+        return {"ip": ip, "scamalytics_score": score, "raw_text": text}
     
 
     
