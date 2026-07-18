@@ -138,6 +138,9 @@ class IPQualityScoreSource(Source):
 
         if not data.get("success", True):
             raise ValueError(f"IPQS returned success=false ({data.get('message')}) for {ip}")
+        
+        if data.get("ISP") == "Private IP Address":
+            raise ValueError(f"IPQS: {ip} is a private IP (no fraud data)")
 
         return data
     
