@@ -170,6 +170,33 @@ class ScamalyticsSource(Source):
 
         return {"ip": ip, "scamalytics_score": score, "raw_text": text}
     
+class GreyNoiseSource(Source):
+    """Looks up an IP's threat activity using the GreyNoise Community API (requires API key)."""
+
+    name = "greynoise"
+
+    def fetch(self, ip: str) -> dict:
+        """Returns GreyNoise Community API's raw JSON response for the given IP."""
+        api_key = os.getenv("GREYNOISE_KEY")
+        if not api_key:
+            raise ValueError("GREYNOISE_KEY not found in environment (.env)")
+
+        url = f"https://api.greynoise.io/v3/community/{ip}"
+        headers = {
+            "key": api_key,
+            "Accept": "application/json",
+        }
+        response = requests.get(url, headers=headers, timeout=5)
+
+        if response.status_code == 404:
+            return {"ip": ip, "noise": False, "riot": False, "classification": "unknown", "message": "IP not observed by GreyNoise"}
+        
+        if response.status_code == 400:
+           raise ValueError(f"GreyNoise: {ip} is not a valid public IP")
+        
+        response.raise_for_status()
+        return response.json()
+    
 
     
     
