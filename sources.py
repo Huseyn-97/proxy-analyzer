@@ -120,6 +120,27 @@ class AbuseIPDBSource(Source):
         
         return data 
     
+class IPQualityScoreSource(Source):
+    """Looks up an IP's fraud score and flags using the IPQualityScore API (requires API key)."""
+
+    name = "ipqs"
+
+    def fetch(self, ip: str) -> dict:
+        """Returns IPQualityScore's raw JSON response for the given IP."""
+        api_key = os.getenv("IPQS_KEY")
+        if not api_key:
+            raise ValueError("IPQS_KEY not found in environment (.env)")
+
+        url = f"https://www.ipqualityscore.com/api/json/ip/{api_key}/{ip}"
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+
+        if not data.get("success", True):
+            raise ValueError(f"IPQS returned success=false ({data.get('message')}) for {ip}")
+
+        return data
+    
 
     
     
