@@ -98,6 +98,16 @@ def extract(gathered: dict) -> dict:
         summary["greynoise_classification"] = gn.get("classification")
 
     
+    codes = []
+    if summary.get("countrycode_ipapi"):
+        codes.append(summary["countrycode_ipapi"])
+    if summary.get("countrycode_ipinfo"):
+        codes.append(summary["countrycode_ipinfo"])
+    if summary.get("countrycode_ipwhois"):
+        codes.append(summary["countrycode_ipwhois"])
+
+    unique_codes = set(codes)
+    summary["geo_agreement"] = len(unique_codes) == 1
  
    
 
