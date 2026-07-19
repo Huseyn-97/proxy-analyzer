@@ -1,7 +1,9 @@
 import requests
 import csv
 import time
+import json
 from tabulate import tabulate
+from analyzer import gather, extract
 
 
 def load_proxies(filename: str) -> list[str]:
@@ -88,29 +90,25 @@ def main():
 
     all_test_results = []
     for proxy in proxies:
-        print(f"Checking:{proxy}")
+        print(f"Checking: {proxy}")
         result = check_proxy(proxy)
+
+        
+        if result["status"] == "alive" and result["exit_ip"]:
+            gathered = gather(result["exit_ip"])
+            summary = extract(gathered)
+            result.update(summary)
+
         all_test_results.append(result)
         print(
-            f"->{result['status']} | {result['latency_ms']} ms| {result['exit_ip']}\n"
+            f"->{result['status']} | {result['latency_ms']} ms | {result['exit_ip']}\n"
         )
 
-    keys = ["proxy", "status", "latency_ms", "exit_ip", "country", "city", "asn", "isp"]
+    
+    with open("results.json", "w", encoding="utf-8") as file:
+        json.dump(all_test_results, file, indent=2, ensure_ascii=False)
 
-    with open("results.csv", "w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=keys)
-        writer.writeheader()
-        writer.writerows(all_test_results)
-
-    table = []
-    for r in all_test_results:
-        row = []
-        for k in keys:
-            row.append(r[k])
-        table.append(row)
-
-    print(tabulate(table, headers=keys, tablefmt="grid"))
-    print("\nresults.csv is being written in the document")
+    print("\nresults.json is being written in the document")
 
 
 if __name__ == "__main__":
