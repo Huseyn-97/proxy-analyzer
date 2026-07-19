@@ -101,7 +101,7 @@ def main():
 
         all_test_results.append(result)
         print(
-            f"->{result['status']} | {result['latency_ms']} ms | {result['exit_ip']}\n"
+            f"->{result.get('status')} | {result.get('latency_ms')} ms | {result.get('exit_ip')}\n"
         )
 
     

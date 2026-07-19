@@ -2,3 +2,4 @@ results.csv
 __pycache__/
 proxies.txt
 .env
+results.json
