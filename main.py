@@ -3,7 +3,7 @@ import csv
 import time
 import json
 from tabulate import tabulate
-from analyzer import gather, extract
+from analyzer import gather
 
 
 def load_proxies(filename: str) -> list[str]:
@@ -95,9 +95,8 @@ def main():
 
         
         if result["status"] == "alive" and result["exit_ip"]:
-            gathered = gather(result["exit_ip"])
-            summary = extract(gathered)
-            result.update(summary)
+             summary = gather(result["exit_ip"])
+             result.update(summary)
 
         all_test_results.append(result)
         print(
