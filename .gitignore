@@ -3,3 +3,4 @@ __pycache__/
 proxies.txt
 .env
 results.json
+cache.json

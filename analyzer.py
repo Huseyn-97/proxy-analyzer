@@ -1,3 +1,7 @@
+import json
+import os
+import time
+
 from sources import (
     ProxyCheckSource,
     IpApiSource,
@@ -9,8 +13,37 @@ from sources import (
     GreyNoiseSource,
 )
 
+CACHE_FILE = "cache.json"
+CACHE_TTL = 86400 # 24 hours in seconds
+
+def load_cache() -> dict:
+    """Loads the cache file. Returns empty dict if it doesn't exist."""
+    if not os.path.exists(CACHE_FILE):
+        return {}
+    try:
+        with open(CACHE_FILE, "r", encoding="utf-8") as file:
+            return json.load(file)
+    except Exception:
+        return {}
+    
+def save_cache(cache: dict) -> None:
+    """Saves the cache dict back to the cache file."""
+    with open(CACHE_FILE, "w", encoding="utf-8") as file:
+        json.dump(cache, file, indent=2, ensure_ascii=False)
+    
+
 def gather(ip: str) -> dict:
     """Runs all intelligence sources for a given IP and merges their results."""
+
+    cache = load_cache()
+
+    # if this IP is in the cache and still fresh, return it without hitting APIs
+    if ip in cache:
+        age = time.time() - cache[ip]["cached_at"]
+        if age < CACHE_TTL:
+            print(f"[cache] {ip} loaded from cache")
+            return cache[ip]["data"]
+        
     sources = [
         ProxyCheckSource(),
         IpApiSource(),
@@ -31,11 +64,19 @@ def gather(ip: str) -> dict:
         except Exception as e:
             errors[source.name] = str(e)
 
-    return {
+    data = {
         "ip": ip,
         "sources": results,
         "errors": errors,
     }
+    
+    # save this fresh result to the cache with a timestamp
+    cache[ip] = {"cached_at": time.time(), "data": data}
+    save_cache(cache)
+
+    return data
+
+
 
 def extract(gathered: dict) -> dict:
     """Takes the raw gather() result and pulls the useful fields into one clean summary."""
