@@ -1,8 +1,6 @@
 import requests
-import csv
 import time
 import json
-from tabulate import tabulate
 from analyzer import gather
 
 
@@ -61,7 +59,6 @@ def check_proxy(proxy_data: str) -> dict:
         "proxy": proxy_data,
         "status": "dead",
         "latency_ms": None,
-       
     }
 
     proxy_dict = parse_proxy(proxy_data)
@@ -82,8 +79,6 @@ def check_proxy(proxy_data: str) -> dict:
     except Exception:
         return test_result
 
-    
-
 
 def main():
     proxies = load_proxies("proxies.txt")
@@ -93,17 +88,15 @@ def main():
         print(f"Checking: {proxy}")
         result = check_proxy(proxy)
 
-        
         if result["status"] == "alive" and result["exit_ip"]:
-             summary = gather(result["exit_ip"])
-             result.update(summary)
+            summary = gather(result["exit_ip"])
+            result.update(summary)
 
         all_test_results.append(result)
         print(
             f"->{result.get('status')} | {result.get('latency_ms')} ms | {result.get('exit_ip')}\n"
         )
 
-    
     with open("results.json", "w", encoding="utf-8") as file:
         json.dump(all_test_results, file, indent=2, ensure_ascii=False)
 
