@@ -59,6 +59,7 @@ def check_proxy(proxy_data: str) -> dict:
         "proxy": proxy_data,
         "status": "dead",
         "latency_ms": None,
+        "exit_ip": None,
     }
 
     proxy_dict = parse_proxy(proxy_data)
@@ -78,6 +79,8 @@ def check_proxy(proxy_data: str) -> dict:
         test_result["exit_ip"] = exit_ip
     except Exception:
         return test_result
+
+    return test_result
 
 
 def main():
