@@ -95,7 +95,11 @@ def extract(gathered: dict) -> dict:
         codes.append(summary["countrycode_ipwhois"])
 
     unique_codes = set(codes)
-    summary["geo_agreement"] = len(unique_codes) == 1
+
+    if len(unique_codes) == 1 and len(codes) >= 2:
+        summary["geo_agreement"] = True
+    else:
+        summary["geo_agreement"] = False
 
     return summary
 
