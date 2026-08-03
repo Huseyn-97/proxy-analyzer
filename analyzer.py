@@ -145,12 +145,17 @@ def gather(ip: str) -> dict:
     # compute the clean summary from the raw data
     summary = extract(data)
 
-    # cache both raw data and the clean summary
-    cache[ip] = {
-        "cached_at": time.time(),
-        "data": data,
-        "summary": summary,
-    }
-    save_cache(cache)
+    # cache only if at least one source succeeded
+    if len(results) > 0:
+        cache[ip] = {
+            "cached_at": time.time(),
+            "data": data,
+            "summary":  summary,
+        }
+        save_cache(cache)
+    else:
+        print(f"[cache] {ip} NOT cached because all sources failed")
+ 
+
 
     return summary
