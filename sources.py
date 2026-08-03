@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import requests
 import os
+import time
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 
@@ -15,6 +16,16 @@ class Source(ABC):
     """
 
     name = "base"
+    min_interval = 1.5   # default: 1.5 seconds between calls
+    last_call = 0
+
+    def _rate_limit_wait(self):
+        """Ensures each source respects its own throughput limit."""
+        now = time.time()
+        wait = self.min_interval - (now - self.last_call)
+        if wait > 0:
+            time.sleep(wait)
+        self.last_call = time.time()
 
     @abstractmethod
     def fetch(self, ip: str) -> dict:
@@ -29,9 +40,11 @@ class ProxyCheckSource(Source):
     """Looks up an IP using the proxycheck.io free API (guest mode, no key)."""
 
     name = "proxycheck"
+    min_interval = 2.0   # proxycheck is stricter
 
     def fetch(self, ip: str) -> dict:
         """ "Returns proxycheck.io's raw JSON response for the given IP address."""
+        self._rate_limit_wait()
         url = f"https://proxycheck.io/v2/{ip}?vpn=1&asn=1"
         response = requests.get(url, timeout=5)
         response.raise_for_status()
@@ -49,9 +62,11 @@ class IpApiSource(Source):
     """Looks up geo/ASN info for an IP using ip- api.com(free, no key)."""
 
     name = "ip-api"
+    min_interval = 1.3   # 45 req/min → ~1.3s
 
     def fetch(self, ip: str) -> dict:
         """ "Returns ip-api.com's raw JSON response for the given IP ."""
+        self._rate_limit_wait()
         url = f"http://ip-api.com/json/{ip}"
         response = requests.get(url, timeout=5)
         response.raise_for_status()
@@ -67,9 +82,11 @@ class IpInfoSource(Source):
     """ "Looks up geo/ASN info for an IP using ipinfo.io (free, no key needed for basic lookups)."""
 
     name = "ipinfo"
+    min_interval = 0     # no throughput limit
 
     def fetch(self, ip: str) -> dict:
         """ "Returns ipinfo.io's raw JSON response for the given IP."""
+        self._rate_limit_wait()
         url = f"https://ipinfo.io/{ip}/json"
         response = requests.get(url, timeout=5)
         response.raise_for_status()
@@ -85,9 +102,11 @@ class IpWhoIsSource(Source):
     """ "Looks up geo/ASN info for an IP using ipwhois.io(free, no key)."""
 
     name = "ipwhois"
+    min_interval = 0.5   # light limit
 
     def fetch(self, ip: str) -> dict:
         """ "Returns ipwho.is's raw JSON response for the given IP."""
+        self._rate_limit_wait()
         url = f"https://ipwho.is/{ip}"
         response = requests.get(url, timeout=5)
         response.raise_for_status()
@@ -105,9 +124,11 @@ class AbuseIPDBSource(Source):
     """Looks up an IP's abuse reputation using the AbuseIPDB API (requires API key)."""
 
     name = "abuseipdb"
+    min_interval = 1.0   # API key → safe interval
 
     def fetch(self, ip: str) -> dict:
         """Returns AbuseIPDB's raw JSON response for the given IP."""
+        self._rate_limit_wait()
         api_key = os.getenv("ABUSEIPDB_KEY")
         if not api_key:
             raise ValueError("ABUSEIPDB_KEY not found in environment (.env)")
@@ -135,9 +156,11 @@ class IPQualityScoreSource(Source):
     """Looks up an IP's fraud score and flags using the IPQualityScore API (requires API key)."""
 
     name = "ipqs"
+    min_interval = 1.0
 
     def fetch(self, ip: str) -> dict:
         """Returns IPQualityScore's raw JSON response for the given IP."""
+        self._rate_limit_wait()
         api_key = os.getenv("IPQS_KEY")
         if not api_key:
             raise ValueError("IPQS_KEY not found in environment (.env)")
@@ -162,9 +185,11 @@ class ScamalyticsSource(Source):
     """Looks up an IP's fraud score by parsing the Scamalytics HTML page (no API key)."""
 
     name = "scamalytics"
+    min_interval = 0.5
 
     def fetch(self, ip: str) -> dict:
         """Parses Scamalytics' HTML page and returns the fraud score for the given IP."""
+        self._rate_limit_wait()
         url = f"https://scamalytics.com/ip/{ip}"
         headers = {
             "User-Agent": (
@@ -192,9 +217,11 @@ class GreyNoiseSource(Source):
     """Looks up an IP's threat activity using the GreyNoise Community API (requires API key)."""
 
     name = "greynoise"
+    min_interval = 1.0
 
     def fetch(self, ip: str) -> dict:
         """Returns GreyNoise Community API's raw JSON response for the given IP."""
+        self._rate_limit_wait()
         api_key = os.getenv("GREYNOISE_KEY")
         if not api_key:
             raise ValueError("GREYNOISE_KEY not found in environment (.env)")
