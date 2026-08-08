@@ -2,6 +2,7 @@ import requests
 import time
 import json
 from analyzer import gather
+from measure import get_real_ip
 
 
 def load_proxies(filename: str) -> list[str]:
@@ -31,8 +32,20 @@ def parse_proxy(proxy_data: str) -> dict | None:
     elif proxy_data.startswith("http://"):
         protocol = "http"
         proxy_data = proxy_data.replace("http://", "")
+    elif proxy_data.startswith("https://"):
+        protocol = "https"
+        proxy_data = proxy_data.replace("https://", "")
+
     else:
         protocol = "http"
+
+    # format: user:pass@host:port
+    if "@" in proxy_data:
+        credentials, address = proxy_data.split("@")
+        user_name, password = credentials.split(":")
+        host, port = address.split(":")
+        url = f"{protocol}://{user_name}:{password}@{host}:{port}"
+        return {"http": url, "https": url}
 
     data_parts = proxy_data.split(":")
 
@@ -84,6 +97,13 @@ def check_proxy(proxy_data: str) -> dict:
 
 
 def main():
+    
+    real_ip = get_real_ip()
+    if real_ip is None:
+        print("Warning: no baseline IP, anonymity checks will be skipped")
+    else:
+        print(f"Real IP (baseline, no proxy): {real_ip}\n")
+
     proxies = load_proxies("proxies.txt")
 
     all_test_results = []
