@@ -2,7 +2,7 @@ import requests
 import time
 import json
 from analyzer import gather
-from measure import get_real_ip
+from measure import get_real_ip, check_anonymity
 
 
 def load_proxies(filename: str) -> list[str]:
@@ -79,6 +79,8 @@ def check_proxy(proxy_data: str) -> dict:
     if proxy_dict is None:
         return test_result
 
+    test_result["proxy_dict"] = proxy_dict
+
     try:
         start_time = time.time()
         response = requests.get(
@@ -97,7 +99,7 @@ def check_proxy(proxy_data: str) -> dict:
 
 
 def main():
-    
+
     real_ip = get_real_ip()
     if real_ip is None:
         print("Warning: no baseline IP, anonymity checks will be skipped")
@@ -115,10 +117,21 @@ def main():
             summary = gather(result["exit_ip"])
             result.update(summary)
 
+            if real_ip is not None:
+                anon = check_anonymity(result["proxy_dict"], real_ip)
+                result.update(anon)
+            else:
+                result["anonymity_level"] = None
+                result["leaked_headers"] = []
+
         all_test_results.append(result)
         print(
-            f"->{result.get('status')} | {result.get('latency_ms')} ms | {result.get('exit_ip')}\n"
+            f"->{result.get('status')} | {result.get('latency_ms')} ms | "
+            f"{result.get('exit_ip')} | anon={result.get('anonymity_level')}\n"
         )
+
+        for r in all_test_results:
+            r.pop("proxy_dict", None)
 
     with open("results.json", "w", encoding="utf-8") as file:
         json.dump(all_test_results, file, indent=2, ensure_ascii=False)

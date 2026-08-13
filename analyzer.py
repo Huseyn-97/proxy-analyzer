@@ -150,12 +150,10 @@ def gather(ip: str) -> dict:
         cache[ip] = {
             "cached_at": time.time(),
             "data": data,
-            "summary":  summary,
+            "summary": summary,
         }
         save_cache(cache)
     else:
         print(f"[cache] {ip} NOT cached because all sources failed")
- 
-
 
     return summary

@@ -16,7 +16,7 @@ class Source(ABC):
     """
 
     name = "base"
-    min_interval = 1.5   # default: 1.5 seconds between calls
+    min_interval = 1.5  # default: 1.5 seconds between calls
     last_call = 0
 
     def _rate_limit_wait(self):
@@ -40,7 +40,7 @@ class ProxyCheckSource(Source):
     """Looks up an IP using the proxycheck.io free API (guest mode, no key)."""
 
     name = "proxycheck"
-    min_interval = 2.0   # proxycheck is stricter
+    min_interval = 2.0  # proxycheck is stricter
 
     def fetch(self, ip: str) -> dict:
         """ "Returns proxycheck.io's raw JSON response for the given IP address."""
@@ -62,7 +62,7 @@ class IpApiSource(Source):
     """Looks up geo/ASN info for an IP using ip- api.com(free, no key)."""
 
     name = "ip-api"
-    min_interval = 1.3   # 45 req/min → ~1.3s
+    min_interval = 1.3  # 45 req/min → ~1.3s
 
     def fetch(self, ip: str) -> dict:
         """ "Returns ip-api.com's raw JSON response for the given IP ."""
@@ -82,7 +82,7 @@ class IpInfoSource(Source):
     """ "Looks up geo/ASN info for an IP using ipinfo.io (free, no key needed for basic lookups)."""
 
     name = "ipinfo"
-    min_interval = 0     # no throughput limit
+    min_interval = 0  # no throughput limit
 
     def fetch(self, ip: str) -> dict:
         """ "Returns ipinfo.io's raw JSON response for the given IP."""
@@ -102,7 +102,7 @@ class IpWhoIsSource(Source):
     """ "Looks up geo/ASN info for an IP using ipwhois.io(free, no key)."""
 
     name = "ipwhois"
-    min_interval = 0.5   # light limit
+    min_interval = 0.5  # light limit
 
     def fetch(self, ip: str) -> dict:
         """ "Returns ipwho.is's raw JSON response for the given IP."""
@@ -124,7 +124,7 @@ class AbuseIPDBSource(Source):
     """Looks up an IP's abuse reputation using the AbuseIPDB API (requires API key)."""
 
     name = "abuseipdb"
-    min_interval = 1.0   # API key → safe interval
+    min_interval = 1.0  # API key → safe interval
 
     def fetch(self, ip: str) -> dict:
         """Returns AbuseIPDB's raw JSON response for the given IP."""
