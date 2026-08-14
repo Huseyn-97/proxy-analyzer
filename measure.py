@@ -1,3 +1,5 @@
+import time
+
 import requests
 
 # Headers that often carry the client's real IP (leak = transparent)
@@ -5,6 +7,9 @@ LEAK_HEADERS = ("X-Forwarded-For", "Forwarded", "X-Real-IP")
 
 # Header that reveals "a proxy was used" (without necessarily leaking IP)
 PROXY_REVEAL_HEADERS = ("Via",)
+
+# Small file (~100 KB) so we don't burn proxy bandwidth
+DOWNLOAD_URL = "https://speed.cloudflare.com/__down?bytes=102400"
 
 
 def get_real_ip() -> str | None:
@@ -76,5 +81,41 @@ def check_anonymity(proxy_dict: dict, real_ip: str) -> dict:
         result["anonymity_level"] = "anonymous"
     else:
         result["anonymity_level"] = "elite"
+
+    return result
+
+
+def check_speed(proxy_dict: dict) -> dict:
+    """Download a small file through the proxy and report throughput in Mbps."""
+    result = {
+        "download_mbps": None,
+    }
+
+    if proxy_dict is None:
+        return result
+
+    try:
+        # Start timer, download THROUGH the proxy
+        start = time.time()
+        response = requests.get(
+            DOWNLOAD_URL,
+            proxies=proxy_dict,
+            timeout=30,
+        )
+        response.raise_for_status()
+        elapsed = time.time() - start
+
+        size_bytes = len(response.content)
+
+        if elapsed <= 0 or size_bytes == 0:
+            return result
+
+        # Convert to megabits per second
+        mbps = (size_bytes * 8) / (elapsed * 1_000_000)
+        result["download_mbps"] = round(mbps, 3)
+
+    except Exception as e:
+        print(f"[measure] speed check failed: {e}")
+        return result
 
     return result

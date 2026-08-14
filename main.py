@@ -2,7 +2,7 @@ import requests
 import time
 import json
 from analyzer import gather
-from measure import get_real_ip, check_anonymity
+from measure import get_real_ip, check_anonymity, check_speed
 
 
 def load_proxies(filename: str) -> list[str]:
@@ -66,6 +66,37 @@ def parse_proxy(proxy_data: str) -> dict | None:
     return None
 
 
+def mask_proxy(proxy_data: str) -> str:
+    """
+    Hide username/password in output.
+    Keep only protocol + host + port, e.g.:
+      socks5://user:pass@1.2.3.4:1080  →  socks5://1.2.3.4:1080
+      host:port:user:pass              →  host:port
+    """
+    if not proxy_data:
+        return proxy_data
+
+    protocol = ""
+    rest = proxy_data
+    for prefix in ("socks5://", "https://", "http://"):
+        if rest.startswith(prefix):
+            protocol = prefix
+            rest = rest[len(prefix) :]
+            break
+
+    # format: user:pass@host:port
+    if "@" in rest:
+        rest = rest.split("@", 1)[1]
+        return f"{protocol}{rest}"
+
+    # format: host:port:user:pass
+    parts = rest.split(":")
+    if len(parts) >= 4:
+        rest = f"{parts[0]}:{parts[1]}"
+
+    return f"{protocol}{rest}"
+
+
 def check_proxy(proxy_data: str) -> dict:
     """Proxy data are tested to get exit ip"""
     test_result = {
@@ -101,6 +132,7 @@ def check_proxy(proxy_data: str) -> dict:
 def main():
 
     real_ip = get_real_ip()
+    # The real ip checks before the proxy checks.
     if real_ip is None:
         print("Warning: no baseline IP, anonymity checks will be skipped")
     else:
@@ -124,14 +156,22 @@ def main():
                 result["anonymity_level"] = None
                 result["leaked_headers"] = []
 
+            # download speed through the proxy (Mbps, not latency)
+            speed = check_speed(result["proxy_dict"])
+            result.update(speed)
+
         all_test_results.append(result)
         print(
             f"->{result.get('status')} | {result.get('latency_ms')} ms | "
-            f"{result.get('exit_ip')} | anon={result.get('anonymity_level')}\n"
+            f"{result.get('exit_ip')} | anon={result.get('anonymity_level')} | "
+            f"{result.get('download_mbps')} Mbps\n"
         )
 
-        for r in all_test_results:
-            r.pop("proxy_dict", None)
+    # Clean output: no credentials / no internal proxy_dict in results.json
+    for r in all_test_results:
+        r.pop("proxy_dict", None)
+        if "proxy" in r:
+            r["proxy"] = mask_proxy(r["proxy"])
 
     with open("results.json", "w", encoding="utf-8") as file:
         json.dump(all_test_results, file, indent=2, ensure_ascii=False)
