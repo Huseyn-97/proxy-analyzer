@@ -11,6 +11,12 @@ PROXY_REVEAL_HEADERS = ("Via",)
 # Small file (~100 KB) so we don't burn proxy bandwidth
 DOWNLOAD_URL = "https://speed.cloudflare.com/__down?bytes=102400"
 
+# Stability: repeat a light latency check through the proxy
+LATENCY_URL = "https://api.ipify.org?format=json"
+LATENCY_RUNS = 5
+# Slowest run must not be worse than this many times the median
+STABLE_MAX_RATIO = 2.0
+
 
 def get_real_ip() -> str | None:
     """Fetch THIS machine's public IP directly (no proxy)."""
@@ -117,5 +123,70 @@ def check_speed(proxy_dict: dict) -> dict:
     except Exception as e:
         print(f"[measure] speed check failed: {e}")
         return result
+
+    return result
+
+
+def _median(numbers: list[float]) -> float:
+    """Return the middle value of a sorted list (beginner-friendly)."""
+    sorted_nums = sorted(numbers)
+    mid = len(sorted_nums) // 2
+    if len(sorted_nums) % 2 == 1:
+        return sorted_nums[mid]
+    # even count: average of the two middle values
+    return (sorted_nums[mid - 1] + sorted_nums[mid]) / 2
+
+
+def check_stability(proxy_dict: dict) -> dict:
+    """
+    Run the latency check several times through the proxy.
+
+    Reports min / median / max (ms) and a simple stable flag.
+    One good answer + wild later answers = not a good proxy.
+    """
+    result = {
+        "latency_min": None,
+        "latency_median": None,
+        "latency_max": None,
+        "stable": None,
+    }
+
+    if proxy_dict is None:
+        return result
+
+    samples = []
+    for _ in range(LATENCY_RUNS):
+        try:
+            start = time.time()
+            response = requests.get(
+                LATENCY_URL,
+                proxies=proxy_dict,
+                timeout=10,
+            )
+            response.raise_for_status()
+            elapsed_ms = (time.time() - start) * 1000
+            samples.append(elapsed_ms)
+        except Exception:
+            # One failed run: skip it, keep going
+            continue
+
+    # Need at least 3 successful runs to judge stability
+    if len(samples) < 3:
+        print("[measure] stability check: not enough latency samples")
+        return result
+
+    latency_min = min(samples)
+    latency_max = max(samples)
+    latency_median = _median(samples)
+
+    result["latency_min"] = round(latency_min)
+    result["latency_median"] = round(latency_median)
+    result["latency_max"] = round(latency_max)
+
+    # stable = slowest is not more than 2x the median
+    if latency_median > 0 and latency_max <= latency_median * STABLE_MAX_RATIO:
+        result["stable"] = True
+    else:
+        result["stable"] = False
 
     return result
