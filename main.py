@@ -2,7 +2,13 @@ import requests
 import time
 import json
 from analyzer import gather
-from measure import get_real_ip, check_anonymity, check_speed, check_stability
+from measure import (
+    get_real_ip,
+    check_anonymity,
+    check_speed,
+    check_stability,
+    check_protocol,
+)
 
 
 def load_proxies(filename: str) -> list[str]:
@@ -164,6 +170,10 @@ def main():
             stability = check_stability(result["proxy_dict"])
             result.update(stability)
 
+            # protocol: verify socks5/http/https for real (don't trust input)
+            proto = check_protocol(proxy)
+            result.update(proto)
+
         all_test_results.append(result)
         print(
             f"->{result.get('status')} | {result.get('latency_ms')} ms | "
@@ -172,7 +182,8 @@ def main():
             f"stable={result.get('stable')} "
             f"(min={result.get('latency_min')} "
             f"med={result.get('latency_median')} "
-            f"max={result.get('latency_max')})\n"
+            f"max={result.get('latency_max')}) | "
+            f"proto={result.get('confirmed_protocol')}\n"
         )
 
     # Clean output: no credentials / no internal proxy_dict in results.json

@@ -17,6 +17,17 @@ LATENCY_RUNS = 5
 # Slowest run must not be worse than this many times the median
 STABLE_MAX_RATIO = 2.0
 
+# Protocols we actually try (not trust from the input string)
+PROTOCOLS_TO_TRY = ("socks5", "http", "https")
+
+# Input prefixes → protocol name.
+# Order matters: "https://" must be checked before "http://".
+PROTOCOL_PREFIXES = (
+    ("socks5://", "socks5"),
+    ("https://", "https"),
+    ("http://", "http"),
+)
+
 
 def get_real_ip() -> str | None:
     """Fetch THIS machine's public IP directly (no proxy)."""
@@ -188,5 +199,104 @@ def check_stability(proxy_dict: dict) -> dict:
         result["stable"] = True
     else:
         result["stable"] = False
+
+    return result
+
+
+def _parse_proxy_parts(proxy_data: str) -> dict | None:
+    """
+    Split a proxy string into pieces we need for protocol tests.
+
+    Supports:
+      socks5://user:pass@host:port
+      http://host:port
+      host:port:user:pass
+    """
+    if not proxy_data:
+        return None
+
+    claimed = "http"
+    rest = proxy_data
+    for prefix, name in PROTOCOL_PREFIXES:
+        if rest.startswith(prefix):
+            claimed = name
+            rest = rest[len(prefix) :]
+            break
+
+    user = None
+    password = None
+
+    if "@" in rest:
+        credentials, address = rest.split("@", 1)
+        user, password = credentials.split(":", 1)
+        host, port = address.split(":")
+    else:
+        parts = rest.split(":")
+        if len(parts) == 2:
+            host, port = parts[0], parts[1]
+        elif len(parts) == 4:
+            host, port = parts[0], parts[1]
+            user, password = parts[2], parts[3]
+        else:
+            return None
+
+    return {
+        "claimed": claimed,
+        "host": host,
+        "port": port,
+        "user": user,
+        "password": password,
+    }
+
+
+def _build_proxy_dict(scheme: str, parts: dict) -> dict:
+    """Build requests proxies= dict for one scheme (socks5 / http / https)."""
+    if parts["user"] and parts["password"]:
+        auth = f"{parts['user']}:{parts['password']}@"
+    else:
+        auth = ""
+    url = f"{scheme}://{auth}{parts['host']}:{parts['port']}"
+    return {"http": url, "https": url}
+
+
+def check_protocol(proxy_data: str) -> dict:
+    """
+    Verify which protocol the proxy actually speaks.
+
+    We do NOT copy socks5/http/https from the input string.
+    We try each scheme with a real request through the proxy.
+    """
+    result = {
+        "confirmed_protocol": None,
+    }
+
+    parts = _parse_proxy_parts(proxy_data)
+    if parts is None:
+        return result
+
+    working = []
+    for scheme in PROTOCOLS_TO_TRY:
+        proxy_dict = _build_proxy_dict(scheme, parts)
+        try:
+            response = requests.get(
+                LATENCY_URL,
+                proxies=proxy_dict,
+                timeout=10,
+            )
+            response.raise_for_status()
+            working.append(scheme)
+        except Exception:
+            continue
+
+    if len(working) == 0:
+        print("[measure] protocol check: no scheme worked")
+        return result
+
+    # Prefer the claimed scheme if it really works; otherwise first that worked
+    claimed = parts["claimed"]
+    if claimed in working:
+        result["confirmed_protocol"] = claimed
+    else:
+        result["confirmed_protocol"] = working[0]
 
     return result
