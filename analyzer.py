@@ -34,6 +34,28 @@ def save_cache(cache: dict) -> None:
         json.dump(cache, file, indent=2, ensure_ascii=False)
 
 
+def cleanup_expired_cache(cache: dict) -> int:
+    """
+    Delete cache entries older than CACHE_TTL (24 hours).
+
+    TTL used to only skip reuse; stale rows stayed in the file forever.
+    Now we actually remove them. Returns how many IPs were deleted.
+    """
+    now = time.time()
+    expired_ips = []
+
+    for ip, entry in cache.items():
+        cached_at = entry.get("cached_at", 0)
+        age = now - cached_at
+        if age >= CACHE_TTL:
+            expired_ips.append(ip)
+
+    for ip in expired_ips:
+        del cache[ip]
+
+    return len(expired_ips)
+
+
 def extract(gathered: dict) -> dict:
     """Takes the raw gather() result and pulls the useful fields into one clean summary."""
     ip = gathered["ip"]
@@ -108,6 +130,12 @@ def gather(ip: str) -> dict:
     """Runs all intelligence sources for a given IP and merges their results."""
 
     cache = load_cache()
+
+    # Drop stale IPs from the file (older than 24 hours)
+    removed = cleanup_expired_cache(cache)
+    if removed > 0:
+        save_cache(cache)
+        print(f"[cache] removed {removed} expired entries")
 
     # if this IP is in the cache and still fresh, return the cached summary
     if ip in cache:
