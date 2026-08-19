@@ -1,0 +1,10 @@
+{
+  "port_targets": [
+    "smtp.gmail.com:25",
+    "smtp.gmail.com:587",
+    "smtp.gmail.com:465",
+    "imap.gmail.com:993",
+    "pop.gmail.com:995"
+  ],
+  "port_timeout_sec": 10
+}
