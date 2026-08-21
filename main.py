@@ -13,6 +13,7 @@ from identity import (
 )
 from performance import check_speed, check_stability
 from ports import check_ports
+from udp import check_udp
 
 
 def load_proxies(filename: str) -> list[str]:
@@ -134,6 +135,10 @@ def main():
             ports = check_ports(proxy, result.get("confirmed_protocol"))
             result.update(ports)
 
+            # UDP: n/a for HTTP; real UDP ASSOCIATE test for SOCKS5
+            udp = check_udp(proxy, result.get("confirmed_protocol"))
+            result.update(udp)
+
         all_test_results.append(result)
         print(
             f"->{result.get('status')} | {result.get('latency_ms')} ms | "
@@ -144,7 +149,8 @@ def main():
             f"med={result.get('latency_median')} "
             f"max={result.get('latency_max')}) | "
             f"proto={result.get('confirmed_protocol')} | "
-            f"ports={result.get('reachable_ports')}\n"
+            f"ports={result.get('reachable_ports')} | "
+            f"udp={result.get('udp_supported')}\n"
         )
 
     for r in all_test_results:
